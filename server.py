@@ -41,3 +41,56 @@ if st.session_state.garden_inventory:
     st.subheader("Your Garden Layout")
     for item in st.session_state.garden_inventory:
         st.write(f"✅ {item['name']} at coordinates: {item['x']}, {item['y']}")
+
+import streamlit as st
+from streamlit_image_coordinates import streamlit_image_coordinates
+import PIL.Image
+
+# 1. Professional Layout
+st.set_page_config(page_title="Dr. Greenthumb Planner", layout="wide")
+
+# 2. Emergency Reset (in case you get stuck)
+if st.sidebar.button("Reset App"):
+    st.query_params.clear()
+    st.rerun()
+
+st.title("🌱 Dr. Greenthumb: Interactive Garden Planner")
+st.write("Click your photo below to 'plant' your selected crop.")
+
+# 3. Memory for your plants
+if "garden_inventory" not in st.session_state:
+    st.session_state.garden_inventory = []
+
+# 4. Plant Selection Menu
+with st.sidebar:
+    st.header("Seed Packet")
+    plant_choice = st.radio(
+        "Select a crop:",
+        ["🍅 Tomato", "🥕 Carrot", "🌻 Sunflower", "🥬 Kale", "🫑 Pepper"]
+    )
+    if st.button("🗑️ Clear Garden"):
+        st.session_state.garden_inventory = []
+        st.rerun()
+
+# 5. The Interactive Photo
+try:
+    # This looks for your garden photo
+    img = PIL.Image.open("garden.jpg")
+    coords = streamlit_image_coordinates(img, key="garden_map")
+
+    if coords:
+        # Save the location when you click
+        new_plant = {"x": coords["x"], "y": coords["y"], "name": plant_choice}
+        st.session_state.garden_inventory.append(new_plant)
+        st.toast(f"Planted {plant_choice}!")
+
+except FileNotFoundError:
+    st.error("⚠️ Photo Missing! Please upload your photo to GitHub and name it 'garden.jpg'.")
+
+# 6. Show what you've planted
+if st.session_state.garden_inventory:
+    st.divider()
+    st.subheader("📋 Your Planted Rows")
+    cols = st.columns(3)
+    for idx, item in enumerate(st.session_state.garden_inventory):
+        cols[idx % 3].write(f"**{item['name']}** at {item['x']}, {item['y']}")
