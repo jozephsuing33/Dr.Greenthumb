@@ -1,27 +1,43 @@
-from fastapi import FastAPI, UploadFile, File
-from fastapi.middleware.cors import CORSMiddleware
-import cv2
-import numpy as np
+import streamlit as st
+from streamlit_image_coordinates import streamlit_image_coordinates
 
-app = FastAPI()
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+# 1. Page Configuration
+st.set_page_config(page_title="Dr. Greenthumb", page_icon="🌱")
 
-@app.post("/scan-garden")
-async def scan(file: UploadFile = File(...)):
-    contents = await file.read()
-    nparr = np.frombuffer(contents, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    h, w, _ = img.shape
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    _, thresh = cv2.threshold(gray, 120, 255, cv2.THRESH_BINARY_INV)
-    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    beds = []
-    for i, cnt in enumerate(contours):
-        if cv2.contourArea(cnt) > 1000:
-            x, y, bw, bh = cv2.boundingRect(cnt)
-            beds.append({
-                "id": i,
-                "x": f"{(x/w)*100}%", "y": f"{(y/h)*100}%",
-                "width": f"{(bw/w)*100}%", "height": f"{(bh/h)*100}%"
-            })
-    return {"beds": beds}
+# 2. EMERGENCY RESET (In case you get stuck on 'undefined')
+if st.sidebar.button("Reset to Home"):
+    st.query_params.clear()
+    st.rerun()
+
+st.title("🌱 Dr. Greenthumb Garden Mapper")
+st.write("Click on a row in your photo to 'plant' a crop!")
+
+# 3. Create a Plant Menu
+plant_choice = st.selectbox("What are you planting today?", 
+                            ["🍅 Tomato", "🥕 Carrot", "🌻 Sunflower", "🥬 Kale", "🫑 Pepper"])
+
+# 4. Memory: This keeps track of where you clicked
+if "garden_inventory" not in st.session_state:
+    st.session_state.garden_inventory = []
+
+# 5. The Interactive Map
+# IMPORTANT: Make sure you have an image file named 'garden.jpg' in your GitHub folder
+# If your image has a different name, change 'garden.jpg' below to match it.
+try:
+    coords = streamlit_image_coordinates("garden.jpg", key="garden_map")
+
+    if coords:
+        # Save the click location and the plant type
+        new_plant = {"x": coords["x"], "y": coords["y"], "name": plant_choice}
+        st.session_state.garden_inventory.append(new_plant)
+        st.success(f"Planted {plant_choice}!")
+
+except FileNotFoundError:
+    st.error("Missing Photo! Please upload a file named 'garden.jpg' to your GitHub.")
+
+# 6. Show your list of planted rows
+if st.session_state.garden_inventory:
+    st.divider()
+    st.subheader("Your Garden Layout")
+    for item in st.session_state.garden_inventory:
+        st.write(f"✅ {item['name']} at coordinates: {item['x']}, {item['y']}")
