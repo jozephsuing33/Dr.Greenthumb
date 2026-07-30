@@ -150,7 +150,7 @@ st.divider()
 try:
     # This looks for your garden photo
     img = PIL.Image.open("garden.jpg")
-    coords = streamlit_image_coordinates(img, key="garden_map")
+    coords = streamlit_image_coordinates(img, key="garden_map_planner")
 
     if coords:
         # Save the location when you click
